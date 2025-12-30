@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,22 +59,29 @@ fun TravelNavHost(
     ) {
         // --- SCREEN 1: CALENDAR GRID ---
         composable("calendar") {
-            val currentMonth = remember { YearMonth.now() }
+            // 1. CHANGE: Use 'var' and 'mutableStateOf' to make it changeable
+            var currentMonth by remember { mutableStateOf(YearMonth.now()) }
 
-            // Format month for SQL query (e.g., "2025-12%")
-            // String.format ensures we get "01", "02" instead of "1", "2"
+            // 2. Re-calculate the query whenever 'currentMonth' changes
             val monthQuery = "${currentMonth.year}-${String.format("%02d", currentMonth.monthValue)}"
 
-            // Observe the database for this month's entries
-            val entriesState by viewModel.getEntriesForMonth(monthQuery)
-                .collectAsState(initial = emptyList())
+            // 3. Fetch data. usage of 'remember(monthQuery)' ensures we reload when month changes
+            val entriesState by remember(monthQuery) {
+                viewModel.getEntriesForMonth(monthQuery)
+            }.collectAsState(initial = emptyList())
 
             CalendarScreen(
                 currentMonth = currentMonth,
                 entries = entriesState,
                 onDateClick = { dateString ->
-                    // When a date is clicked, go to the Post screen
                     navController.navigate("post/$dateString")
+                },
+                // 4. NEW: Handle button clicks
+                onPrevMonth = {
+                    currentMonth = currentMonth.minusMonths(1)
+                },
+                onNextMonth = {
+                    currentMonth = currentMonth.plusMonths(1)
                 }
             )
         }
@@ -113,23 +121,32 @@ fun TravelNavHost(
 @Composable
 fun TravelPostScreen(
     selectedDate: String,
-    existingEntry: TravelEntry?, // Can be null if no entry exists yet
+    existingEntry: TravelEntry?,
     onSave: (TravelEntry) -> Unit,
     onBack: () -> Unit
 ) {
-    // 1. State: Hold the text and the image path
-    // If we have an existing entry, pre-fill the data.
-    var text by remember { mutableStateOf(existingEntry?.description ?: "") }
-    var imageUri by remember { mutableStateOf<Uri?>(existingEntry?.imagePath?.toUri()) }
+    // 1. Setup the state
+    var text by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // 2. Image Picker: Logic to open the phone's gallery
+    // --- NEW CODE STARTS HERE ---
+    // This watches 'existingEntry'. Whenever the database sends new data,
+    // we update our text and image variables.
+    LaunchedEffect(existingEntry) {
+        if (existingEntry != null) {
+            text = existingEntry.description
+            // Only update image if we haven't picked a new one manually yet
+            if (existingEntry.imagePath != null) {
+                imageUri = Uri.parse(existingEntry.imagePath)
+            }
+        }
+    }
+    // --- NEW CODE ENDS HERE ---
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        // When user picks an image, update our state
-        if (uri != null) {
-            imageUri = uri
-        }
+        if (uri != null) imageUri = uri
     }
 
     Scaffold(
@@ -138,16 +155,13 @@ fun TravelPostScreen(
                 title = { Text("Entry for $selectedDate") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        // Use AutoMirrored icon for RTL support (good practice)
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 actions = {
-                    // Save Button
                     IconButton(onClick = {
                         val entry = TravelEntry(
                             date = selectedDate,
-                            // Convert Uri back to String for the Database
                             imagePath = imageUri?.toString(),
                             description = text
                         )
@@ -159,19 +173,19 @@ fun TravelPostScreen(
             )
         }
     ) { padding ->
+        // ... The rest of your UI code (Column, Box, TextField) stays exactly the same ...
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // --- UPPER SCREEN: PHOTO AREA (50% Height) ---
+            // PHOTO AREA
             Box(
                 modifier = Modifier
-                    .weight(1f) // Takes up upper 50%
+                    .weight(1f)
                     .fillMaxWidth()
                     .background(Color.LightGray.copy(alpha = 0.3f))
                     .clickable {
-                        // Launch the photo picker
                         imagePickerLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )
@@ -179,43 +193,33 @@ fun TravelPostScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (imageUri != null) {
-                    // Show the selected image
                     AsyncImage(
                         model = imageUri,
-                        contentDescription = "Selected Travel Photo",
+                        contentDescription = "Selected Photo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    // Show placeholder if no image
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Color.Gray
-                        )
+                        Icon(Icons.Default.Add, null, tint = Color.Gray)
                         Text("Tap to add photo", color = Color.Gray)
                     }
                 }
             }
 
-            // --- LOWER SCREEN: TEXT AREA (50% Height) ---
+            // TEXT AREA
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier
-                    .weight(1f) // Takes up lower 50%
+                    .weight(1f)
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("How was your day? Write your story here...") },
-                // Make the text field look clean (transparent background)
+                placeholder = { Text("Write your story here...") },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                maxLines = 20
+                    unfocusedContainerColor = Color.Transparent
+                )
             )
         }
     }

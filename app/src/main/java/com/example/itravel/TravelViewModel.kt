@@ -28,13 +28,22 @@ class TravelViewModel(application: Application) : AndroidViewModel(application) 
     // 3. Write Actions (Must be run in a Coroutine)
 
     fun saveEntry(date: String, imagePath: String?, text: String) {
-        // viewModelScope ensures this gets cancelled if the app closes
         viewModelScope.launch {
-            val entry = TravelEntry(
-                date = date,
-                imagePath = imagePath,
-                description = text
-            )
+
+            // 1. Try to take persistent permission for the image
+            if (imagePath != null) {
+                try {
+                    val uri = android.net.Uri.parse(imagePath)
+                    val flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    getApplication<Application>().contentResolver.takePersistableUriPermission(uri, flags)
+                } catch (e: Exception) {
+                    // If it fails (e.g. image is not from gallery), just ignore
+                    e.printStackTrace()
+                }
+            }
+
+            // 2. Save to DB
+            val entry = TravelEntry(date, imagePath, text)
             dao.insertEntry(entry)
         }
     }
@@ -46,3 +55,4 @@ class TravelViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 }
+

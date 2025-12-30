@@ -31,75 +31,81 @@ import coil.compose.AsyncImage
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 
 // --- 1. MAIN SCREEN COMPOSABLE ---
 @Composable
 fun CalendarScreen(
     currentMonth: YearMonth,
-    entries: List<TravelEntry>, // Your Room Entity list
-    onDateClick: (String) -> Unit
+    entries: List<TravelEntry>,
+    onDateClick: (String) -> Unit,
+    // NEW: Add callbacks for navigation
+    onNextMonth: () -> Unit,
+    onPrevMonth: () -> Unit
 ) {
-    // 1. Calculate the days to display (including empty slots for padding)
     val daysList = remember(currentMonth) { getDaysInMonth(currentMonth) }
+    val entryMap = remember(entries) { entries.associate { it.date to it.imagePath } }
 
-    // 2. Convert List to Map for fast lookup.
-    // Key: "2025-12-30", Value: "file://path/to/image.jpg"
-    val entryMap = remember(entries) {
-        entries.associate { it.date to it.imagePath }
-    }
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // --- Header: Month Name ---
-        Text(
-            text = "${currentMonth.month.name} ${currentMonth.year}",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // --- Header: Day Names (Sun, Mon, Tue...) ---
+        // --- NEW HEADER WITH BUTTONS ---
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            val daysOfWeek = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-            daysOfWeek.forEach { day ->
+            // Previous Button (<)
+            IconButton(onClick = onPrevMonth) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
+            }
+
+            // Month Name (e.g., "December 2025")
+            Text(
+                text = "${currentMonth.month.name} ${currentMonth.year}",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Next Button (>)
+            IconButton(onClick = onNextMonth) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
+            }
+        }
+
+        // --- Day Names Header ---
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat").forEach { day ->
                 Text(
                     text = day,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.bodyMedium
+                    color = Color.Gray
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // --- Grid: The Calendar Days ---
+        // --- The Grid (Logic is the same) ---
         LazyVerticalGrid(
-            columns = GridCells.Fixed(7), // 7 days in a week
+            columns = GridCells.Fixed(7),
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(daysList) { date ->
                 if (date != null) {
-                    // Create the key string "yyyy-MM-dd" to check the database
                     val dateKey = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                    val imagePath = entryMap[dateKey]
-
                     DayCell(
                         dayNumber = date.dayOfMonth,
-                        imagePath = imagePath,
+                        imagePath = entryMap[dateKey],
                         onClick = { onDateClick(dateKey) }
                     )
                 } else {
-                    // Render an empty invisible box for padding at the start of the month
                     Box(modifier = Modifier.aspectRatio(0.8f))
                 }
             }
