@@ -25,4 +25,8 @@ interface TravelDao {
     // 4. Delete (Optional, but good to have)
     @Query("DELETE FROM travel_entries WHERE date = :date")
     suspend fun deleteEntry(date: String)
+
+    @Query("SELECT * FROM travel_entries ORDER BY date DESC")
+    fun getAllEntries(): Flow<List<TravelEntry>>
+
 }
