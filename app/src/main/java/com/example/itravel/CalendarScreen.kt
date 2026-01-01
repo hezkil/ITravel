@@ -1,4 +1,5 @@
 package com.example.itravel
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,49 +35,53 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 
-// --- 1. MAIN SCREEN COMPOSABLE ---
 @Composable
 fun CalendarScreen(
     currentMonth: YearMonth,
     entries: List<TravelEntry>,
     onDateClick: (String) -> Unit,
-    // NEW: Add callbacks for navigation
     onNextMonth: () -> Unit,
-    onPrevMonth: () -> Unit
+    onPrevMonth: () -> Unit,
+    isDarkMode: Boolean,
+    onToggleTheme: () -> Unit
 ) {
     val daysList = remember(currentMonth) { getDaysInMonth(currentMonth) }
     val entryMap = remember(entries) { entries.associate { it.date to it.imagePath } }
-
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-
-        // --- NEW HEADER WITH BUTTONS ---
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Previous Button (<)
             IconButton(onClick = onPrevMonth) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Month")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
             }
-
-            // Month Name (e.g., "December 2025")
             Text(
                 text = "${currentMonth.month.name} ${currentMonth.year}",
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
-
-            // Next Button (>)
+            IconButton(onClick = onToggleTheme) {
+                Icon(
+                    imageVector = if (isDarkMode)
+                        Icons.Default.LightMode
+                    else
+                        Icons.Default.DarkMode,
+                    contentDescription = "Toggle theme"
+                )
+            }
             IconButton(onClick = onNextMonth) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Month")
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
             }
         }
-
-        // --- Day Names Header ---
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat").forEach { day ->
                 Text(
@@ -87,10 +92,7 @@ fun CalendarScreen(
                 )
             }
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-
-        // --- The Grid (Logic is the same) ---
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
             modifier = Modifier.fillMaxSize(),
@@ -113,16 +115,15 @@ fun CalendarScreen(
     }
 }
 
-// --- 2. SUB-COMPONENT: SINGLE DAY CELL ---
 @Composable
 fun DayCell(
     dayNumber: Int,
-    imagePath: String?, // Null if no photo saved for this day
+    imagePath: String?,
     onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .aspectRatio(0.8f) // 0.8f makes it slightly taller (portrait shape)
+            .aspectRatio(0.8f)
             .clip(RoundedCornerShape(8.dp))
             .background(
                 if (imagePath == null) Color.LightGray.copy(alpha = 0.2f)
@@ -131,7 +132,6 @@ fun DayCell(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        // Layer 1: The Image (if exists)
         if (imagePath != null) {
             AsyncImage(
                 model = imagePath,
@@ -139,16 +139,12 @@ fun DayCell(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-
-            // Layer 2: Semi-transparent overlay so the number is readable
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.25f))
             )
         }
-
-        // Layer 3: The Date Number
         Text(
             text = dayNumber.toString(),
             color = if (imagePath != null) Color.White else Color.Black,
@@ -158,32 +154,14 @@ fun DayCell(
     }
 }
 
-// --- 3. HELPER FUNCTION ---
-/**
- * Returns a list representing the grid cells.
- * Null entries are "padding" for days before the 1st of the month.
- * Example: If Dec 1st is Wednesday, the list starts with [null, null, null, Dec1, Dec2...]
- */
 fun getDaysInMonth(yearMonth: YearMonth): List<LocalDate?> {
     val firstDayOfMonth = yearMonth.atDay(1)
     val daysInMonth = yearMonth.lengthOfMonth()
-
-    // Calculate padding.
-    // java.time uses 1=Mon ... 7=Sun.
-    // We want 0=Sun, 1=Mon ...
-    // So "Mon(1) % 7 = 1" (1 empty slot: Sunday)
-    // "Sun(7) % 7 = 0" (0 empty slots: Starts on Sunday)
     val startDayOffset = firstDayOfMonth.dayOfWeek.value % 7
-
     val days = mutableListOf<LocalDate?>()
-
-    // Add nulls for empty slots at start
     repeat(startDayOffset) { days.add(null) }
-
-    // Add actual dates
     for (i in 1..daysInMonth) {
         days.add(yearMonth.atDay(i))
     }
-
     return days
 }

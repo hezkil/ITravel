@@ -45,10 +45,11 @@ android {
 dependencies {
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version") // Adds Kotlin extensions and Flow support
+    implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

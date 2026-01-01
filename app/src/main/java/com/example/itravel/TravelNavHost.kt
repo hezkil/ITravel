@@ -52,17 +52,17 @@ import java.time.YearMonth
 @Composable
 fun TravelNavHost(
     modifier: Modifier = Modifier,
-    viewModel: TravelViewModel = viewModel()
+    viewModel: TravelViewModel = viewModel(),
+    isDarkMode: Boolean,
+    onToggleTheme: () -> Unit
 ) {
     val navController = rememberNavController()
     val items = listOf(BottomNavItem.Home, BottomNavItem.Gallery)
-
     Scaffold(
         bottomBar = {
             NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination: NavDestination? = navBackStackEntry?.destination
-
                 items.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                     NavigationBarItem(
@@ -88,52 +88,38 @@ fun TravelNavHost(
             startDestination = "calendar",
             modifier = modifier.padding(innerPadding)
         ) {
-            // --- SCREEN 1: CALENDAR GRID (HOME) ---
             composable("calendar") {
                 var currentMonth by remember { mutableStateOf(YearMonth.now()) }
-
                 val monthQuery =
                     "${currentMonth.year}-${String.format("%02d", currentMonth.monthValue)}"
-
                 val entriesState by remember(monthQuery) {
                     viewModel.getEntriesForMonth(monthQuery)
                 }.collectAsState(initial = emptyList())
-
                 CalendarScreen(
                     currentMonth = currentMonth,
                     entries = entriesState,
-                    onDateClick = { dateString ->
-                        navController.navigate("post/$dateString")
-                    },
-                    onPrevMonth = {
-                        currentMonth = currentMonth.minusMonths(1)
-                    },
-                    onNextMonth = {
-                        currentMonth = currentMonth.plusMonths(1)
-                    }
+                    onDateClick = { navController.navigate("post/$it") },
+                    onPrevMonth = { currentMonth = currentMonth.minusMonths(1) },
+                    onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
+                    isDarkMode = isDarkMode,
+                    onToggleTheme = onToggleTheme
                 )
             }
-
-            // --- SCREEN 2: SIMPLE GALLERY TAB (IMAGE) ---
             composable("gallery") {
                 val allEntries by viewModel.allEntries.collectAsState(initial = emptyList())
                 GalleryScreen(
                     entries = allEntries,
-                    onEntryClick = { date ->
-                        navController.navigate("post/$date")
-                    }
+                    onEntryClick = { navController.navigate("post/$it") },
+                    isDarkMode = isDarkMode,
+                    onToggleTheme = onToggleTheme
                 )
             }
-
-            // --- SCREEN 3: POSTING SCREEN ---
             composable(
                 route = "post/{date}",
                 arguments = listOf(navArgument("date") { type = NavType.StringType })
             ) { backStackEntry ->
                 val dateStr = backStackEntry.arguments?.getString("date") ?: return@composable
-
                 val entryState by viewModel.getEntry(dateStr).collectAsState(initial = null)
-
                 TravelPostScreen(
                     selectedDate = dateStr,
                     existingEntry = entryState,
@@ -164,7 +150,6 @@ fun TravelPostScreen(
 ) {
     var text by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-
     LaunchedEffect(existingEntry) {
         if (existingEntry != null) {
             text = existingEntry.description
@@ -173,13 +158,11 @@ fun TravelPostScreen(
             }
         }
     }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) imageUri = uri
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -197,7 +180,7 @@ fun TravelPostScreen(
                             description = text
                         )
                         onSave(entry)
-                    }) {
+                    } ) {
                         Icon(Icons.Default.Check, "Save")
                     }
                 }
@@ -209,7 +192,6 @@ fun TravelPostScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // PHOTO AREA
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -236,8 +218,6 @@ fun TravelPostScreen(
                     }
                 }
             }
-
-            // TEXT AREA
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },

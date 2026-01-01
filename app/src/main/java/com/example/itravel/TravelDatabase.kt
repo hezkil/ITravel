@@ -1,4 +1,5 @@
 package com.example.itravel
+
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -6,15 +7,11 @@ import androidx.room.RoomDatabase
 
 @Database(entities = [TravelEntry::class], version = 1, exportSchema = false)
 abstract class TravelDatabase : RoomDatabase() {
-
     abstract fun travelDao(): TravelDao
-
     companion object {
         @Volatile
         private var INSTANCE: TravelDatabase? = null
-
         fun getDatabase(context: Context): TravelDatabase {
-            // If instance exists, return it; otherwise create it
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,

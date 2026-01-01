@@ -2,7 +2,6 @@ package com.example.itravel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +15,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -42,26 +44,24 @@ import coil.compose.AsyncImage
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-// Add this helper function at the top of GalleryScreen.kt (outside composables)
 private fun formatDate(dateString: String): String {
     return try {
         val date = LocalDate.parse(dateString)
-        DateTimeFormatter.ofPattern("MMM dd, yyyy").format(date) // "Dec 19, 2025"
+        DateTimeFormatter.ofPattern("MMM dd, yyyy").format(date)
     } catch (e: Exception) {
-        dateString // fallback to original if parsing fails
+        dateString
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryScreen(
     entries: List<TravelEntry>,
-    onEntryClick: (String) -> Unit
+    onEntryClick: (String) -> Unit,
+    isDarkMode: Boolean,
+    onToggleTheme: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-
-    // Filter entries by search query (date or description)
     val filteredEntries = remember(entries, searchQuery) {
         if (searchQuery.isEmpty()) {
             entries
@@ -72,22 +72,33 @@ fun GalleryScreen(
             }
         }
     }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-
-            // Title
-            Text(
-                text = "Gallery",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-            )
-
-            // Search Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Gallery",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onToggleTheme) {
+                    Icon(
+                        imageVector = if (isDarkMode)
+                            Icons.Default.LightMode
+                        else
+                            Icons.Default.DarkMode,
+                        contentDescription = "Toggle theme"
+                    )
+                }
+            }
             TextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -107,8 +118,6 @@ fun GalleryScreen(
                 ),
                 singleLine = true
             )
-
-            // Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
@@ -147,7 +156,7 @@ private fun GalleryItemCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f) // square small image
+                    .aspectRatio(1f)
                     .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                     .background(Color.LightGray),
                 contentAlignment = Alignment.Center
@@ -167,7 +176,6 @@ private fun GalleryItemCard(
                     )
                 }
             }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -176,17 +184,11 @@ private fun GalleryItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = formatDate(entry.date), // you can format to "May 17, 2025" before passing
+                    text = formatDate(entry.date),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Start,
                     modifier = Modifier.weight(1f)
                 )
-
-                // Placeholder mood emoji; later you can store mood in DB
-//                Text(
-//                    text = "\uD83D\uDE42",
-//                    modifier = Modifier.padding(start = 4.dp)
-//                )
             }
         }
     }
