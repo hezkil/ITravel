@@ -48,6 +48,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import java.time.YearMonth
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 
 @Composable
 fun TravelNavHost(
@@ -120,15 +123,16 @@ fun TravelNavHost(
             ) { backStackEntry ->
                 val dateStr = backStackEntry.arguments?.getString("date") ?: return@composable
                 val entryState by viewModel.getEntry(dateStr).collectAsState(initial = null)
+
                 TravelPostScreen(
                     selectedDate = dateStr,
                     existingEntry = entryState,
                     onSave = { newEntry ->
-                        viewModel.saveEntry(
-                            newEntry.date,
-                            newEntry.imagePath,
-                            newEntry.description
-                        )
+                        viewModel.saveEntry(newEntry.date, newEntry.imagePath, newEntry.description)
+                        navController.popBackStack()
+                    },
+                    onDelete = {
+                        viewModel.deleteEntry(dateStr)
                         navController.popBackStack()
                     },
                     onBack = {
@@ -146,10 +150,15 @@ fun TravelPostScreen(
     selectedDate: String,
     existingEntry: TravelEntry?,
     onSave: (TravelEntry) -> Unit,
+    onDelete: () -> Unit,
     onBack: () -> Unit
 ) {
     var text by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+
+    // State to show/hide the confirmation dialog
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(existingEntry) {
         if (existingEntry != null) {
             text = existingEntry.description
@@ -158,11 +167,11 @@ fun TravelPostScreen(
             }
         }
     }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) imageUri = uri
-    }
+    ) { uri: Uri? -> if (uri != null) imageUri = uri }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -173,44 +182,33 @@ fun TravelPostScreen(
                     }
                 },
                 actions = {
+                    if (existingEntry != null) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, "Delete")
+                        }
+                    }
+
                     IconButton(onClick = {
-                        val entry = TravelEntry(
-                            date = selectedDate,
-                            imagePath = imageUri?.toString(),
-                            description = text
-                        )
+                        val entry = TravelEntry(selectedDate, imageUri?.toString(), text)
                         onSave(entry)
-                    } ) {
+                    }) {
                         Icon(Icons.Default.Check, "Save")
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .background(Color.LightGray.copy(alpha = 0.3f))
-                    .clickable {
-                        imagePickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
+                    .clickable { imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 contentAlignment = Alignment.Center
             ) {
                 if (imageUri != null) {
-                    AsyncImage(
-                        model = imageUri,
-                        contentDescription = "Selected Photo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    AsyncImage(model = imageUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.Add, null, tint = Color.Gray)
@@ -221,15 +219,28 @@ fun TravelPostScreen(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
                 placeholder = { Text("Write your story here...") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent
-                )
+                colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent)
+            )
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Entry?") },
+                text = { Text("Are you sure you want to delete this memory? This cannot be undone.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDelete()
+                            showDeleteDialog = false
+                        }
+                    ) { Text("Delete", color = Color.Red) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                }
             )
         }
     }
