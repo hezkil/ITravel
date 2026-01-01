@@ -155,10 +155,7 @@ fun TravelPostScreen(
 ) {
     var text by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-
-    // State to show/hide the confirmation dialog
     var showDeleteDialog by remember { mutableStateOf(false) }
-
     LaunchedEffect(existingEntry) {
         if (existingEntry != null) {
             text = existingEntry.description
@@ -167,11 +164,9 @@ fun TravelPostScreen(
             }
         }
     }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? -> if (uri != null) imageUri = uri }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -187,7 +182,6 @@ fun TravelPostScreen(
                             Icon(Icons.Default.Delete, "Delete")
                         }
                     }
-
                     IconButton(onClick = {
                         val entry = TravelEntry(selectedDate, imageUri?.toString(), text)
                         onSave(entry)
@@ -224,7 +218,6 @@ fun TravelPostScreen(
                 colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent)
             )
         }
-
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
