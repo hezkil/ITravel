@@ -11,8 +11,9 @@ class PostActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val date = intent.getStringExtra("date") ?: return
+        val isDarkMode = intent.getBooleanExtra("isDarkMode", false)
         setContent {
-            ITravelTheme(darkTheme = false) {
+            ITravelTheme(darkTheme = isDarkMode) {
                 val viewModel: TravelViewModel = viewModel()
                 val entryState = viewModel
                     .getEntry(date)

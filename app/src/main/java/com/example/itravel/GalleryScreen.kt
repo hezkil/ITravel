@@ -139,6 +139,7 @@ fun GalleryScreen(
                             context.startActivity(
                                 Intent(context, PostActivity::class.java)
                                     .putExtra("date", entry.date)
+                                    .putExtra("isDarkMode", isDarkMode)
                             )
                         }
                     )

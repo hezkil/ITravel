@@ -111,6 +111,7 @@ fun CalendarScreen(
                             context.startActivity(
                                 Intent(context, PostActivity::class.java)
                                     .putExtra("date", dateKey)
+                                    .putExtra("isDarkMode", isDarkMode)
                             )
                         }
                     )
