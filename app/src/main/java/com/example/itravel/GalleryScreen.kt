@@ -1,5 +1,6 @@
 package com.example.itravel
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -57,11 +59,11 @@ private fun formatDate(dateString: String): String {
 @Composable
 fun GalleryScreen(
     entries: List<TravelEntry>,
-    onEntryClick: (String) -> Unit,
     isDarkMode: Boolean,
     onToggleTheme: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val context = LocalContext.current
     val filteredEntries = remember(entries, searchQuery) {
         if (searchQuery.isEmpty()) {
             entries
@@ -133,7 +135,12 @@ fun GalleryScreen(
                 items(filteredEntries) { entry ->
                     GalleryItemCard(
                         entry = entry,
-                        onClick = { onEntryClick(entry.date) }
+                        onClick = {
+                            context.startActivity(
+                                Intent(context, PostActivity::class.java)
+                                    .putExtra("date", entry.date)
+                            )
+                        }
                     )
                 }
             }

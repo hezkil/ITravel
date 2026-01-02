@@ -41,12 +41,10 @@ import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import java.time.YearMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
@@ -101,7 +99,6 @@ fun TravelNavHost(
                 CalendarScreen(
                     currentMonth = currentMonth,
                     entries = entriesState,
-                    onDateClick = { navController.navigate("post/$it") },
                     onPrevMonth = { currentMonth = currentMonth.minusMonths(1) },
                     onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
                     isDarkMode = isDarkMode,
@@ -112,32 +109,8 @@ fun TravelNavHost(
                 val allEntries by viewModel.allEntries.collectAsState(initial = emptyList())
                 GalleryScreen(
                     entries = allEntries,
-                    onEntryClick = { navController.navigate("post/$it") },
                     isDarkMode = isDarkMode,
                     onToggleTheme = onToggleTheme
-                )
-            }
-            composable(
-                route = "post/{date}",
-                arguments = listOf(navArgument("date") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val dateStr = backStackEntry.arguments?.getString("date") ?: return@composable
-                val entryState by viewModel.getEntry(dateStr).collectAsState(initial = null)
-
-                TravelPostScreen(
-                    selectedDate = dateStr,
-                    existingEntry = entryState,
-                    onSave = { newEntry ->
-                        viewModel.saveEntry(newEntry.date, newEntry.imagePath, newEntry.description)
-                        navController.popBackStack()
-                    },
-                    onDelete = {
-                        viewModel.deleteEntry(dateStr)
-                        navController.popBackStack()
-                    },
-                    onBack = {
-                        navController.popBackStack()
-                    }
                 )
             }
         }

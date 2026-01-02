@@ -1,5 +1,6 @@
 package com.example.itravel
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,17 +40,18 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun CalendarScreen(
     currentMonth: YearMonth,
     entries: List<TravelEntry>,
-    onDateClick: (String) -> Unit,
     onNextMonth: () -> Unit,
     onPrevMonth: () -> Unit,
     isDarkMode: Boolean,
     onToggleTheme: () -> Unit
 ) {
+    val context = LocalContext.current
     val daysList = remember(currentMonth) { getDaysInMonth(currentMonth) }
     val entryMap = remember(entries) { entries.associate { it.date to it.imagePath } }
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -105,7 +107,12 @@ fun CalendarScreen(
                     DayCell(
                         dayNumber = date.dayOfMonth,
                         imagePath = entryMap[dateKey],
-                        onClick = { onDateClick(dateKey) }
+                        onClick = {
+                            context.startActivity(
+                                Intent(context, PostActivity::class.java)
+                                    .putExtra("date", dateKey)
+                            )
+                        }
                     )
                 } else {
                     Box(modifier = Modifier.aspectRatio(0.8f))
